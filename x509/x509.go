@@ -16,6 +16,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
+	"crypto/sm2"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
@@ -94,10 +95,10 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 		}
 		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
 	// sm2 support addition
-	case PublicKey:
+	case *sm2.PublicKey:
 		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
-		publicKeyAlgorithm.Algorithm = oidPublicKeyECDSA
-		// publicKeyAlgorithm.Algorithm = oidPublicKeySM2
+		// publicKeyAlgorithm.Algorithm = oidPublicKeyECDSA
+		publicKeyAlgorithm.Algorithm = oidPublicKeySM2
 		publicKeyAlgorithm.Parameters.IsCompound = false
 		publicKeyAlgorithm.Parameters.Class = 0
 		publicKeyAlgorithm.Parameters.Tag = 6
@@ -1095,11 +1096,11 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 		return pub, nil
 	// sm2 support addition: add sm2 case for parsing pki to sm2.PublicKey
 	case SM2:
-		namedCurve := P256Sm2()
+		namedCurve := sm2.P256Sm2()
 		// asn1Data = KeyData.PublicKey.Bytes
 		x, y := elliptic.Unmarshal(namedCurve, asn1Data)
 
-		pub := &PublicKey{
+		pub := &sm2.PublicKey{
 			Curve: namedCurve,
 			X:     x,
 			Y:     y,
@@ -2027,7 +2028,7 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 		}
 
 	// add GMSM2 support for signingParamsForPublicKey
-	case *PublicKey:
+	case *sm2.PublicKey:
 		pubType = SM2
 		hashFunc = crypto.SHA256
 		// hashFunc = SM3                       // need to add GMSM3 algorithm in crypto
