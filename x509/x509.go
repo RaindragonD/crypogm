@@ -65,6 +65,7 @@ func ParsePKIXPublicKey(derBytes []byte) (pub interface{}, err error) {
 	return parsePublicKey(algo, &pki)
 }
 
+// added sm2 support
 func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorithm pkix.AlgorithmIdentifier, err error) {
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -92,8 +93,17 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 			return
 		}
 		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
+	// sm2 support addition
+	case PublicKey:
+		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+		publicKeyAlgorithm.Algorithm = oidPublicKeyECDSA
+		// publicKeyAlgorithm.Algorithm = oidPublicKeySM2
+		publicKeyAlgorithm.Parameters.IsCompound = false
+		publicKeyAlgorithm.Parameters.Class = 0
+		publicKeyAlgorithm.Parameters.Tag = 6
+		publicKeyAlgorithm.Parameters.FullBytes = []byte{6, 8, 42, 129, 28, 207, 85, 1, 130, 45} // asn1.Marshal(asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 301})
 	default:
-		return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: only RSA and ECDSA public keys supported")
+		return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: only RSA, ECDSA, and sm2 public keys supported")
 	}
 
 	return publicKeyBytes, publicKeyAlgorithm, nil
@@ -188,6 +198,8 @@ const (
 	SHA256WithRSAPSS
 	SHA384WithRSAPSS
 	SHA512WithRSAPSS
+	// sm2 support addition
+	SM2WithSHA256
 )
 
 func (algo SignatureAlgorithm) isRSAPSS() bool {
@@ -215,12 +227,16 @@ const (
 	RSA
 	DSA
 	ECDSA
+	// sm2 support addition
+	SM2
 )
 
 var publicKeyAlgoName = [...]string{
 	RSA:   "RSA",
 	DSA:   "DSA",
 	ECDSA: "ECDSA",
+	// sm2 support addition
+	SM2: "SM2",
 }
 
 func (algo PublicKeyAlgorithm) String() string {
@@ -295,6 +311,9 @@ var (
 	oidSignatureECDSAWithSHA384 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 3}
 	oidSignatureECDSAWithSHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
 
+	// sm2 support addition
+	oidSHA256withSM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
+
 	oidSHA256 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}
 	oidSHA384 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 2}
 	oidSHA512 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 3}
@@ -330,6 +349,8 @@ var signatureAlgorithmDetails = []struct {
 	{ECDSAWithSHA256, "ECDSA-SHA256", oidSignatureECDSAWithSHA256, ECDSA, crypto.SHA256},
 	{ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, ECDSA, crypto.SHA384},
 	{ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, ECDSA, crypto.SHA512},
+	// sm2 support addition
+	{SM2WithSHA256, "SM2-SHA256", oidSHA256withSM2, SM2, crypto.SHA256},
 }
 
 // pssParameters reflects the parameters in an AlgorithmIdentifier that
@@ -455,6 +476,9 @@ var (
 	oidPublicKeyRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
 	oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
 	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+
+	// sm2 support addition
+	oidPublicKeySM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
 )
 
 func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm {
@@ -465,6 +489,9 @@ func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm 
 		return DSA
 	case oid.Equal(oidPublicKeyECDSA):
 		return ECDSA
+	// sm2 support addition
+	case oid.Equal(oidPublicKeySM2):
+		return SM2
 	}
 	return UnknownPublicKeyAlgorithm
 }
@@ -980,6 +1007,7 @@ type distributionPointName struct {
 	RelativeName pkix.RDNSequence `asn1:"optional,tag:1"`
 }
 
+// added sm2 support
 func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{}, error) {
 	asn1Data := keyData.PublicKey.RightAlign()
 	switch algo {
@@ -1060,6 +1088,18 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 			return nil, errors.New("x509: failed to unmarshal elliptic curve point")
 		}
 		pub := &ecdsa.PublicKey{
+			Curve: namedCurve,
+			X:     x,
+			Y:     y,
+		}
+		return pub, nil
+	// sm2 support addition: add sm2 case for parsing pki to sm2.PublicKey
+	case SM2:
+		namedCurve := P256Sm2()
+		// asn1Data = KeyData.PublicKey.Bytes
+		x, y := elliptic.Unmarshal(namedCurve, asn1Data)
+
+		pub := &PublicKey{
 			Curve: namedCurve,
 			X:     x,
 			Y:     y,
@@ -1986,8 +2026,14 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 			err = errors.New("x509: unknown elliptic curve")
 		}
 
+	// add GMSM2 support for signingParamsForPublicKey
+	case *PublicKey:
+		pubType = SM2
+		hashFunc = crypto.SHA256
+		// hashFunc = SM3                       // need to add GMSM3 algorithm in crypto
+		sigAlgo.Algorithm = oidSHA256withSM2 // need to define oidSignatureGMSM2
 	default:
-		err = errors.New("x509: only RSA and ECDSA keys supported")
+		err = errors.New("x509: only RSA, ECDSA, and SM keys supported")
 	}
 
 	if err != nil {
