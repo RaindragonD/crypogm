@@ -16,10 +16,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rsa"
-	"crypto/sm2"
 	_ "crypto/sha1"
 	_ "crypto/sha256"
 	_ "crypto/sha512"
+	"crypto/sm2"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
@@ -1373,6 +1373,12 @@ func parseNameConstraintsExtension(out *Certificate, e pkix.Extension) (unhandle
 	return unhandled, nil
 }
 
+// RFC 5280, 4.2.1.10
+type nameConstraints struct {
+	Permittded []generalSubtree `asn1:"optional,tag:0"`
+	Excluded   []generalSubtree `asn1:"optional,tag:1"`
+}
+
 func parseCertificate(in *certificate) (*Certificate, error) {
 	out := new(Certificate)
 	out.Raw = in.Raw
@@ -1463,10 +1469,41 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 
 			case 30:
-				unhandled, err = parseNameConstraintsExtension(out, e)
-				if err != nil {
-					return nil, err
+				// sm2 support addition
+				algo := getSignatureAlgorithmFromAI(in.SignatureAlgorithm)
+				if algo == SM2WithSHA256 {
+					// RFC 5280, 4.2.1.10
+					var constraints nameConstraints
+					if rest, err := asn1.Unmarshal(e.Value, &constraints); err != nil {
+						return nil, err
+					} else if len(rest) != 0 {
+						return nil, errors.New("x509: trailing data after X.509 NameConstraints")
+					}
+
+					if len(constraints.Excluded) > 0 && e.Critical {
+						return out, UnhandledCriticalExtension{}
+					}
+
+					for _, subtree := range constraints.Permitted {
+						if len(subtree.Name) == 0 {
+							if e.Critical {
+								return out, UnhandledCriticalExtension{}
+							}
+							continue
+						}
+						out.PermittedDNSDomains = append(out.PermittedDNSDomains, subtree.Name)
+					}
+				} else {
+					unhandled, err = parseNameConstraintsExtension(out, e)
+					if err != nil {
+						return nil, err
+					}
 				}
+
+				// unhandled, err = parseNameConstraintsExtension(out, e)
+				// if err != nil {
+				// 	return nil, err
+				// }
 
 			case 31:
 				// RFC 5280, 4.2.1.13
@@ -2138,6 +2175,13 @@ func CreateCertificate(rand io.Reader, template, parent *Certificate, pub, priv 
 		return nil, err
 	}
 
+	// sm2 support addition: change PublicKey.Curve
+	if template.SignatureAlgorithm == SM2WithSHA256 {
+		var puk sm2.PublicKey
+		puk.Curve = sm2.P256Sm2()
+		pub = puk
+	}
+
 	publicKeyBytes, publicKeyAlgorithm, err := marshalPublicKey(pub)
 	if err != nil {
 		return nil, err
@@ -2182,9 +2226,18 @@ func CreateCertificate(rand io.Reader, template, parent *Certificate, pub, priv 
 
 	c.Raw = tbsCertContents
 
-	h := hashFunc.New()
-	h.Write(tbsCertContents)
-	digest := h.Sum(nil)
+	// h := hashFunc.New()
+	// h.Write(tbsCertContents)
+	// digest := h.Sum(nil)
+	// sm2 support addition: add SM2WithSHA256 case
+	switch template.SignatureAlgorithm {
+	case SM2WithSHA256:
+		digest := tbsCertContents
+	default:
+		h := hashFunc.New()
+		h.Write(tbsCertContents)
+		digest := h.Sum(nil)
+	}
 
 	var signerOpts crypto.SignerOpts
 	signerOpts = hashFunc
