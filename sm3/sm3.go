@@ -16,6 +16,7 @@ limitations under the License.
 package sm3
 
 import (
+	"crypto"
 	"encoding/binary"
 	"hash"
 )
@@ -24,6 +25,10 @@ type SM3 struct {
 	digest      [8]uint32 // digest represents the partial evaluation of V
 	length      uint64    // length of the message
 	unhandleMsg []byte    // uint8  //
+}
+
+func init() {
+	crypto.RegisterHash(crypto.SM3, New)
 }
 
 func (sm3 *SM3) ff0(x, y, z uint32) uint32 { return x ^ y ^ z }

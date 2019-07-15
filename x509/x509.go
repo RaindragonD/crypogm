@@ -205,7 +205,7 @@ const (
 	SHA384WithRSAPSS
 	SHA512WithRSAPSS
 	// sm2 support addition
-	// SM2WithSHA256
+	SM2WithSM3
 )
 
 func (algo SignatureAlgorithm) isRSAPSS() bool {
@@ -319,7 +319,7 @@ var (
 
 	// sm2 support addition
 	oidSignatureSM2WithSM3      = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
-	oidSHA256withSM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
+	// oidSHA256withSM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
 
 	oidSHA256 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}
 	oidSHA384 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 2}
@@ -356,8 +356,8 @@ var signatureAlgorithmDetails = []struct {
 	{ECDSAWithSHA256, "ECDSA-SHA256", oidSignatureECDSAWithSHA256, ECDSA, crypto.SHA256},
 	{ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, ECDSA, crypto.SHA384},
 	{ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, ECDSA, crypto.SHA512},
-	// // sm2 support addition
-	// {SM2WithSHA256, "SM2-SHA256", oidSHA256withSM2, SM2, crypto.SHA256},
+	// sm2 support addition
+	// {SM2WithSM3, "SM2-SM3", oidSignatureSM2WithSM3, ECDSA, crypto.SM3},
 }
 
 // pssParameters reflects the parameters in an AlgorithmIdentifier that
@@ -485,7 +485,7 @@ var (
 	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
 
 	// sm2 support addition
-	oidPublicKeySM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
+	// oidPublicKeySM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
 )
 
 func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm {
@@ -537,6 +537,7 @@ func namedCurveFromOID(oid asn1.ObjectIdentifier) elliptic.Curve {
 		return elliptic.P384()
 	case oid.Equal(oidNamedCurveP521):
 		return elliptic.P521()
+	// sm2 support addition
 	case oid.Equal(oidNamedCurveP256SM2):
 		return sm2.P256Sm2()
 	}
@@ -554,6 +555,9 @@ func oidFromNamedCurve(curve elliptic.Curve) (asn1.ObjectIdentifier, bool) {
 		return oidNamedCurveP384, true
 	case elliptic.P521():
 		return oidNamedCurveP521, true
+	// sm2 support addition
+	case sm2.P256Sm2():
+		return oidNamedCurveP256SM2, true
 	}
 
 	return nil, false
@@ -2085,9 +2089,9 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 	// add GMSM2 support for signingParamsForPublicKey
 	case *sm2.PublicKey:
 		pubType = ECDSA
-		hashFunc = crypto.SHA256
-		// hashFunc = SM3                       // need to add GMSM3 algorithm in crypto
-		sigAlgo.Algorithm = oidSignatureSM2WithSM3 // need to define oidSignatureGMSM2
+		// hashFunc = crypto.SHA256
+		hashFunc = crypto.SM3
+		sigAlgo.Algorithm = oidSignatureSM2WithSM3
 	default:
 		err = errors.New("x509: only RSA, ECDSA, and SM keys supported")
 	}
