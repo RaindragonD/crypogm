@@ -357,7 +357,7 @@ var signatureAlgorithmDetails = []struct {
 	{ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, ECDSA, crypto.SHA384},
 	{ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, ECDSA, crypto.SHA512},
 	// sm2 support addition
-	// {SM2WithSM3, "SM2-SM3", oidSignatureSM2WithSM3, ECDSA, crypto.SM3},
+	{SM2WithSM3, "SM2-SM3", oidSignatureSM2WithSM3, ECDSA, crypto.SM3},
 }
 
 // pssParameters reflects the parameters in an AlgorithmIdentifier that
@@ -966,8 +966,20 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
 			return errors.New("x509: ECDSA signature contained zero or negative values")
 		}
-		if !ecdsa.Verify(pub, digest, ecdsaSig.R, ecdsaSig.S) {
-			return errors.New("x509: ECDSA verification failure")
+		switch pub.Curve {
+		case sm2.P256Sm2():
+			sm2pub := &sm2.PublicKey{
+				Curve: pub.Curve,
+				X:     pub.X,
+				Y:     pub.Y,
+			}
+			if !sm2.Sm2Verify(sm2pub, signed, nil, ecdsaSig.R, ecdsaSig.S) {
+				return errors.New("x509: SM2 verification failure")
+			}
+		default:
+			if !ecdsa.Verify(pub, digest, ecdsaSig.R, ecdsaSig.S) {
+				return errors.New("x509: ECDSA verification failure")
+			}
 		}
 		return
 	}
