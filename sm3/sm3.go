@@ -1,4 +1,11 @@
 /*
+	Sheqi Zhang and Yulong Li 2019
+	gm support addition/modification
+	File Addition: SM3 is the standard hash function that we use to support SM2 algorithm. Thus,
+		we add this file to the standard library.
+*/
+
+/*
 Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

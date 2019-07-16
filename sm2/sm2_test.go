@@ -1,4 +1,11 @@
 /*
+	Sheqi Zhang and Yulong Li 2019
+	gm support addition/modification
+	File Addition: This file is added to the standard library crypto to test
+		whether our addition of sm2 algorithm is successful.
+*/
+
+/*
 Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -153,7 +160,7 @@ func TestSm2(t *testing.T) {
 		UnknownExtKeyUsage: testUnknownExtKeyUsage,
 
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 
 		OCSPServer:            []string{"http://ocsp.example.com"},
 		IssuingCertificateURL: []string{"http://crt.example.com/ca1.crt"},

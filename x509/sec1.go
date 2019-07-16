@@ -1,3 +1,9 @@
+/*
+	Sheqi Zhang and Yulong Li 2019
+	gm support addition/modification
+	Modification: function and struct addition, sm2 oid addition
+*/
+
 // Copyright 2012 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -6,20 +12,20 @@ package x509
 
 import (
 	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/sm2"
-	"crypto/rand"
-	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha1"
+	"crypto/sm2"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"hash"
 	"math/big"
-	"hash"	
 )
 
 const ecPrivKeyVersion = 1
@@ -309,7 +315,6 @@ func MarshalSm2EcryptedPrivateKey(PrivKey *sm2.PrivateKey, pwd []byte) ([]byte, 
 	}
 	return asn1.Marshal(encryptedPkey)
 }
-
 
 // MarshalSm2UnecryptedPrivateKey converts a sm2 private key to DER format
 func MarshalSm2UnecryptedPrivateKey(key *sm2.PrivateKey) ([]byte, error) {

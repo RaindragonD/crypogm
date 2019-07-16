@@ -66,7 +66,6 @@ func ParsePKIXPublicKey(derBytes []byte) (pub interface{}, err error) {
 	return parsePublicKey(algo, &pki)
 }
 
-// added sm2 support
 func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorithm pkix.AlgorithmIdentifier, err error) {
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -94,7 +93,13 @@ func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorith
 			return
 		}
 		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
-	// sm2 support addition
+
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2 case in marshalPublicKey(...)
+	*/
+
 	case *sm2.PublicKey:
 		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
 		publicKeyAlgorithm.Algorithm = oidPublicKeyECDSA
@@ -204,7 +209,12 @@ const (
 	SHA256WithRSAPSS
 	SHA384WithRSAPSS
 	SHA512WithRSAPSS
-	// sm2 support addition
+
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added SM2WithSM3 as constant
+	*/
 	SM2WithSM3
 )
 
@@ -233,16 +243,12 @@ const (
 	RSA
 	DSA
 	ECDSA
-	// sm2 support addition
-	// SM2
 )
 
 var publicKeyAlgoName = [...]string{
 	RSA:   "RSA",
 	DSA:   "DSA",
 	ECDSA: "ECDSA",
-	// sm2 support addition
-	// SM2: "SM2",
 }
 
 func (algo PublicKeyAlgorithm) String() string {
@@ -317,8 +323,12 @@ var (
 	oidSignatureECDSAWithSHA384 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 3}
 	oidSignatureECDSAWithSHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
 
-	// sm2 support addition
-	oidSignatureSM2WithSM3      = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2's oid
+	*/
+	oidSignatureSM2WithSM3 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 501}
 	// oidSHA256withSM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
 
 	oidSHA256 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 2, 1}
@@ -356,7 +366,12 @@ var signatureAlgorithmDetails = []struct {
 	{ECDSAWithSHA256, "ECDSA-SHA256", oidSignatureECDSAWithSHA256, ECDSA, crypto.SHA256},
 	{ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, ECDSA, crypto.SHA384},
 	{ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, ECDSA, crypto.SHA512},
-	// sm2 support addition
+
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2's oid
+	*/
 	{SM2WithSM3, "SM2-SM3", oidSignatureSM2WithSM3, ECDSA, crypto.SM3},
 }
 
@@ -483,9 +498,6 @@ var (
 	oidPublicKeyRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
 	oidPublicKeyDSA   = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 1}
 	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
-
-	// sm2 support addition
-	// oidPublicKeySM2 = asn1.ObjectIdentifier{1, 2, 156, 197, 1, 301}
 )
 
 func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm {
@@ -496,9 +508,6 @@ func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm 
 		return DSA
 	case oid.Equal(oidPublicKeyECDSA):
 		return ECDSA
-	// sm2 support addition
-	// case oid.Equal(oidPublicKeySM2):
-	// 	return SM2
 	}
 	return UnknownPublicKeyAlgorithm
 }
@@ -524,6 +533,11 @@ var (
 	oidNamedCurveP256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}
 	oidNamedCurveP384 = asn1.ObjectIdentifier{1, 3, 132, 0, 34}
 	oidNamedCurveP521 = asn1.ObjectIdentifier{1, 3, 132, 0, 35}
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2's oid
+	*/
 	oidNamedCurveP256SM2 = asn1.ObjectIdentifier{1, 2, 156, 10197, 1, 301}
 )
 
@@ -537,7 +551,11 @@ func namedCurveFromOID(oid asn1.ObjectIdentifier) elliptic.Curve {
 		return elliptic.P384()
 	case oid.Equal(oidNamedCurveP521):
 		return elliptic.P521()
-	// sm2 support addition
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2's oid
+	*/
 	case oid.Equal(oidNamedCurveP256SM2):
 		return sm2.P256Sm2()
 	}
@@ -555,7 +573,11 @@ func oidFromNamedCurve(curve elliptic.Curve) (asn1.ObjectIdentifier, bool) {
 		return oidNamedCurveP384, true
 	case elliptic.P521():
 		return oidNamedCurveP521, true
-	// sm2 support addition
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2's oid
+	*/
 	case sm2.P256Sm2():
 		return oidNamedCurveP256SM2, true
 	}
@@ -953,7 +975,12 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 			return errors.New("x509: DSA verification failure")
 		}
 		return
-	// sm2 support addition
+
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: added sm2's oid
+	*/
 	case *sm2.PublicKey:
 		if pubKeyAlgo != ECDSA {
 			return signaturePublicKeyAlgoMismatchError(pubKeyAlgo, pub)
@@ -970,7 +997,7 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 		if !sm2.Sm2Verify(pub, digest, nil, ecdsaSig.R, ecdsaSig.S) {
 			return errors.New("x509: SM2 verification failure")
 		}
-		return 
+		return
 	case *ecdsa.PublicKey:
 		if pubKeyAlgo != ECDSA {
 			return signaturePublicKeyAlgoMismatchError(pubKeyAlgo, pub)
@@ -1040,7 +1067,6 @@ type distributionPointName struct {
 	RelativeName pkix.RDNSequence `asn1:"optional,tag:1"`
 }
 
-// added sm2 support
 func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{}, error) {
 	asn1Data := keyData.PublicKey.RightAlign()
 	switch algo {
@@ -1120,32 +1146,18 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 		if x == nil {
 			return nil, errors.New("x509: failed to unmarshal elliptic curve point")
 		}
-		// pub := &ecdsa.PublicKey{
-		// 	Curve: namedCurve,
-		// 	X:     x,
-		// 	Y:     y,
-		// }
-		// sm2 compromise: cannot support ecdsa now;
-		// reason for compromise: sm2 and ecdsa use the same publickey oid
-		// fix this later
+
+		/*
+			Sheqi Zhang and Yulong Li 2019
+			gm support addition/modification
+			Addition: hardcode x509 to support sm2 since edcsa and sm2 have the same oid
+		*/
 		pub := &sm2.PublicKey{
 			Curve: namedCurve,
 			X:     x,
 			Y:     y,
 		}
 		return pub, nil
-	// sm2 support addition: add sm2 case for parsing pki to sm2.PublicKey
-	// case SM2:
-	// 	namedCurve := sm2.P256Sm2()
-	// 	// asn1Data = KeyData.PublicKey.Bytes
-	// 	x, y := elliptic.Unmarshal(namedCurve, asn1Data)
-
-	// 	pub := &sm2.PublicKey{
-	// 		Curve: namedCurve,
-	// 		X:     x,
-	// 		Y:     y,
-	// 	}
-	// 	return pub, nil
 	default:
 		return nil, nil
 	}
@@ -1534,10 +1546,10 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				// 		out.PermittedDNSDomains = append(out.PermittedDNSDomains, subtree.Name)
 				// 	}
 				// } else {
-					unhandled, err = parseNameConstraintsExtension(out, e)
-					if err != nil {
-						return nil, err
-					}
+				unhandled, err = parseNameConstraintsExtension(out, e)
+				if err != nil {
+					return nil, err
+				}
 				// }
 
 				// unhandled, err = parseNameConstraintsExtension(out, e)
@@ -2104,7 +2116,11 @@ func signingParamsForPublicKey(pub interface{}, requestedSigAlgo SignatureAlgori
 			err = errors.New("x509: unknown elliptic curve")
 		}
 
-	// add GMSM2 support for signingParamsForPublicKey
+	/*
+		Sheqi Zhang and Yulong Li 2019
+		gm support addition/modification
+		Addition: add GMSM2 support for signingParamsForPublicKey
+	*/
 	case *sm2.PublicKey:
 		pubType = ECDSA
 		// hashFunc = crypto.SHA256
@@ -2215,13 +2231,6 @@ func CreateCertificate(rand io.Reader, template, parent *Certificate, pub, priv 
 		return nil, err
 	}
 
-	// sm2 support addition: change PublicKey.Curve
-	// if template.SignatureAlgorithm == SM2WithSHA256 {
-	// 	var puk sm2.PublicKey
-	// 	puk.Curve = sm2.P256Sm2()
-	// 	pub = puk
-	// }
-
 	publicKeyBytes, publicKeyAlgorithm, err := marshalPublicKey(pub)
 	if err != nil {
 		return nil, err
@@ -2269,15 +2278,6 @@ func CreateCertificate(rand io.Reader, template, parent *Certificate, pub, priv 
 	h := hashFunc.New()
 	h.Write(tbsCertContents)
 	digest := h.Sum(nil)
-	// sm2 support addition: add SM2WithSM3 case
-	// fmt.Println(template.SignatureAlgorithm)
-	// switch template.SignatureAlgorithm {
-	// case SM2WithSM3:
-	// 	fmt.Println("check")
-	// 	digest = tbsCertContents
-	// default:
-	// 	fmt.Println("check2")
-	// }
 
 	var signerOpts crypto.SignerOpts
 	signerOpts = hashFunc

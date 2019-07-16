@@ -1,4 +1,12 @@
 /*
+	Sheqi Zhang and Yulong Li 2019
+	gm support addition/modification
+	File Addition: This file is added to the standard library crypto to
+		provide algorithms and struct that enable us to add SM2 support
+		to process of generating certificate.
+*/
+
+/*
 Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

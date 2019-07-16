@@ -1,4 +1,12 @@
 /*
+	Sheqi Zhang and Yulong Li 2019
+	gm support addition/modification
+	File Addition: This file is added to the standard library crypto to
+		generate a curve that is critical for us to add SM2 support to the
+		process of generating certificate.
+*/
+
+/*
 Copyright Suzhou Tongji Fintech Research Institute 2017 All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -126,7 +134,7 @@ func (curve sm2P256Curve) Add(x1, y1, x2, y2 *big.Int) (*big.Int, *big.Int) {
 	sm2P256FromBig(&Y2, y2)
 	sm2P256FromBig(&Z2, z2)
 	sm2P256PointAdd(&X1, &Y1, &Z1, &X2, &Y2, &Z2, &X3, &Y3, &Z3)
-	return sm2P256ToAffine(&X3, &Y3, &Z3)
+	return nil, sm2P256ToAffine(&X3, &Y3, &Z3)
 }
 
 func (curve sm2P256Curve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
@@ -137,7 +145,7 @@ func (curve sm2P256Curve) Double(x1, y1 *big.Int) (*big.Int, *big.Int) {
 	sm2P256FromBig(&Y1, y1)
 	sm2P256FromBig(&Z1, z1)
 	sm2P256PointDouble(&X1, &Y1, &Z1, &X1, &Y1, &Z1)
-	return sm2P256ToAffine(&X1, &Y1, &Z1)
+	return nil, sm2P256ToAffine(&X1, &Y1, &Z1)
 }
 
 func (curve sm2P256Curve) ScalarMult(x1, y1 *big.Int, k []byte) (*big.Int, *big.Int) {
@@ -148,7 +156,7 @@ func (curve sm2P256Curve) ScalarMult(x1, y1 *big.Int, k []byte) (*big.Int, *big.
 	sm2P256FromBig(&Y1, y1)
 	sm2P256GetScalar(&scalarReversed, k)
 	sm2P256ScalarMult(&X, &Y, &Z, &X1, &Y1, &scalarReversed)
-	return sm2P256ToAffine(&X, &Y, &Z)
+	return nil, sm2P256ToAffine(&X, &Y, &Z)
 }
 
 func (curve sm2P256Curve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
@@ -157,7 +165,7 @@ func (curve sm2P256Curve) ScalarBaseMult(k []byte) (*big.Int, *big.Int) {
 
 	sm2P256GetScalar(&scalarReversed, k)
 	sm2P256ScalarBaseMult(&X, &Y, &Z, &scalarReversed)
-	return sm2P256ToAffine(&X, &Y, &Z)
+	return nil, sm2P256ToAffine(&X, &Y, &Z)
 }
 
 var sm2P256Precomputed = [9 * 2 * 15 * 2]uint32{
