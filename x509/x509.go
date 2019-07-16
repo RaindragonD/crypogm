@@ -953,6 +953,24 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 			return errors.New("x509: DSA verification failure")
 		}
 		return
+	// sm2 support addition
+	case *sm2.PublicKey:
+		if pubKeyAlgo != ECDSA {
+			return signaturePublicKeyAlgoMismatchError(pubKeyAlgo, pub)
+		}
+		ecdsaSig := new(ecdsaSignature)
+		if rest, err := asn1.Unmarshal(signature, ecdsaSig); err != nil {
+			return err
+		} else if len(rest) != 0 {
+			return errors.New("x509: trailing data after SM2 signature")
+		}
+		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
+			return errors.New("x509: SM2 signature contained zero or negative values")
+		}
+		if !sm2.Sm2Verify(pub, digest, nil, ecdsaSig.R, ecdsaSig.S) {
+			return errors.New("x509: SM2 verification failure")
+		}
+		return 
 	case *ecdsa.PublicKey:
 		if pubKeyAlgo != ECDSA {
 			return signaturePublicKeyAlgoMismatchError(pubKeyAlgo, pub)
@@ -966,20 +984,8 @@ func checkSignature(algo SignatureAlgorithm, signed, signature []byte, publicKey
 		if ecdsaSig.R.Sign() <= 0 || ecdsaSig.S.Sign() <= 0 {
 			return errors.New("x509: ECDSA signature contained zero or negative values")
 		}
-		switch pub.Curve {
-		case sm2.P256Sm2():
-			sm2pub := &sm2.PublicKey{
-				Curve: pub.Curve,
-				X:     pub.X,
-				Y:     pub.Y,
-			}
-			if !sm2.Sm2Verify(sm2pub, signed, nil, ecdsaSig.R, ecdsaSig.S) {
-				return errors.New("x509: SM2 verification failure")
-			}
-		default:
-			if !ecdsa.Verify(pub, digest, ecdsaSig.R, ecdsaSig.S) {
-				return errors.New("x509: ECDSA verification failure")
-			}
+		if !ecdsa.Verify(pub, digest, ecdsaSig.R, ecdsaSig.S) {
+			return errors.New("x509: ECDSA verification failure")
 		}
 		return
 	}
@@ -2263,12 +2269,14 @@ func CreateCertificate(rand io.Reader, template, parent *Certificate, pub, priv 
 	h := hashFunc.New()
 	h.Write(tbsCertContents)
 	digest := h.Sum(nil)
-	// sm2 support addition: add SM2WithSHA256 case
+	// sm2 support addition: add SM2WithSM3 case
+	// fmt.Println(template.SignatureAlgorithm)
 	// switch template.SignatureAlgorithm {
-	// case SM2WithSHA256:
+	// case SM2WithSM3:
+	// 	fmt.Println("check")
 	// 	digest = tbsCertContents
 	// default:
-	// 	break
+	// 	fmt.Println("check2")
 	// }
 
 	var signerOpts crypto.SignerOpts
