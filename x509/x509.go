@@ -1152,10 +1152,20 @@ func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{
 			gm support addition/modification
 			Addition: hardcode x509 to support sm2 since edcsa and sm2 have the same oid
 		*/
-		pub := &sm2.PublicKey{
-			Curve: namedCurve,
-			X:     x,
-			Y:     y,
+		var pub interface{}
+		switch namedCurve {
+		case sm2.P256Sm2():
+			pub = &sm2.PublicKey{
+				Curve: namedCurve,
+				X:     x,
+				Y:     y,
+			}
+		default:
+			pub = &ecdsa.PublicKey{
+				Curve: namedCurve,
+				X:     x,
+				Y:     y,
+			}
 		}
 		return pub, nil
 	default:
