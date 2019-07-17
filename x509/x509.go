@@ -1531,41 +1531,10 @@ func parseCertificate(in *certificate) (*Certificate, error) {
 				}
 
 			case 30:
-				// sm2 support addition
-				// algo := getSignatureAlgorithmFromAI(in.SignatureAlgorithm)
-				// if algo == SM2WithSHA256 {
-				// 	// RFC 5280, 4.2.1.10
-				// 	var constraints nameConstraints
-				// 	if rest, err := asn1.Unmarshal(e.Value, &constraints); err != nil {
-				// 		return nil, err
-				// 	} else if len(rest) != 0 {
-				// 		return nil, errors.New("x509: trailing data after X.509 NameConstraints")
-				// 	}
-
-				// 	if len(constraints.Excluded) > 0 && e.Critical {
-				// 		return out, UnhandledCriticalExtension{}
-				// 	}
-
-				// 	for _, subtree := range constraints.Permitted {
-				// 		if len(subtree.Name) == 0 {
-				// 			if e.Critical {
-				// 				return out, UnhandledCriticalExtension{}
-				// 			}
-				// 			continue
-				// 		}
-				// 		out.PermittedDNSDomains = append(out.PermittedDNSDomains, subtree.Name)
-				// 	}
-				// } else {
 				unhandled, err = parseNameConstraintsExtension(out, e)
 				if err != nil {
 					return nil, err
 				}
-				// }
-
-				// unhandled, err = parseNameConstraintsExtension(out, e)
-				// if err != nil {
-				// 	return nil, err
-				// }
 
 			case 31:
 				// RFC 5280, 4.2.1.13
